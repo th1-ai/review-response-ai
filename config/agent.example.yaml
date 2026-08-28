@@ -1,0 +1,90 @@
+# ---------------------------------------------------------------------------
+# agent.yaml - Review-Response AI's own knobs.
+#
+# `make setup` copies this file to config/agent.yaml. Edit THAT one; this
+# example stays as a clean reference. See config/hotel.yaml for the systems
+# every agent shares (mode, llm provider, review approvals).
+# ---------------------------------------------------------------------------
+
+# This agent never reads the PMS or a mailbox at all, and messaging is
+# send-only (the duty-manager alert) - see docs/integrations.md "Not used
+# by this agent". Keeps `make run`'s SAMPLE DATA warning from naming
+# systems.pms/systems.email/systems.messaging when they were never read.
+# See core/adapters/__init__.py:_systems_used.
+systems_used: []
+
+# Which review source to read from. `make doctor` tells you if it is working.
+reviews:
+  adapter: mock                # mock | csv | stub
+  # mock: reads fixtures/inbound/*.json - what `make demo` uses.
+  # csv:  reads data/imports/reviews.csv - a CSV export from your review tool.
+  #       Posting a reply in csv mode logs it to data/exports for you to paste
+  #       in by hand; no platform API is called. See docs/integrations.md.
+  # stub: no reviews at all - useful only to prove the doctor error message.
+
+# The platforms you actually watch. Purely descriptive - printed in run
+# summaries and the README. Nothing in the code branches on this list; it
+# does not restrict which `source` values an adapter may return.
+platforms: [Google, "Booking.com", TripAdvisor, Vrbo]
+
+# The five rules from the behavioural spec. Every one defaults to true, which
+# matches "a row is absent" in the original product. Flip one, run
+# `make run`, and read the new draft or the escalation reason - the rule
+# toggle changes real output, not just a log line.
+rules:
+  escalate-low: true       # 2 stars and below never drafts - goes to a human.
+  brand-voice: true         # true: signed reply. false: unsigned house voice.
+  personalise: true         # true: quote a line + first name. false: generic.
+  no-comp-mentions: true    # drop a quoted line if it names a competitor.
+  same-day: true             # cosmetic only - changes the run summary wording.
+                              # what actually delivers same-day coverage is
+                              # how often you schedule `make run` (see below).
+
+# Who signs a reply when brand-voice is on, and what goes out instead when
+# it is off. Put your own name and role here.
+signoff:
+  name: "Elena"
+  role: "Guest Relations"
+  # Used when brand-voice is off. {hotel_name} is filled from hotel.yaml.
+  unsigned: "The {hotel_name} team"
+
+# The line that closes a "thank" reply. Keep it short; no promises you cannot
+# keep about when the guest can rebook.
+return_visit_line: "We would love to welcome you back on your next visit."
+
+# Which team a category's feedback goes to in the reply. `default` is used
+# for any category not listed here, and for a review with no category at all.
+amenities:
+  fnb: "the restaurant and kitchen team"
+  rooms: "our rooms and housekeeping team"
+  spa: "the spa team"
+  service: "the front-of-house team"
+  location: "the team here on site"
+  stay: "the whole house team"
+  default: "the team"
+
+# Names that must never be repeated back to a guest, whatever the review
+# says. Case-insensitive substring match against the quoted line only - it
+# never touches the rest of the reply. Replace this with your own local
+# competitive set - "Example Rival Hotel" is a placeholder, kept here (rather
+# than an empty list) so `make demo` shows the scrub actually happening on
+# fixtures/inbound/review-03-competitor-scrub.json.
+competitors: ["Example Rival Hotel"]
+
+# The optional cosmetic morning note (tools/narrate.py). It reads run stats
+# only - never a guest's name or review text - and is never sent to a guest.
+# Off by default: it is a nice-to-have, not part of the roster promise.
+narrate:
+  enabled: false
+  knowledge: [reputation-voice.md]
+
+# How often `make run --watch` polls when you are not using cron/launchd/systemd.
+poll_seconds: 14400   # 4 hours - see docs/how-it-works.md "the 24-hour promise"
+
+# What `make schedule` prints a cron/launchd/systemd snippet for, by default.
+# One of the names in core/schedule.py:CADENCES (every-5-min, every-15-min,
+# every-30-min, hourly, every-4-hours, nightly, morning, weekly) or a 5-field
+# cron expression. Keep this in step with poll_seconds above - both are "how
+# often make run actually runs" and the README quotes this value.
+schedule:
+  run: every-4-hours

@@ -1,0 +1,11 @@
+{
+  "id": "google-1002",
+  "source": "Google",
+  "rating": 3,
+  "guest_name": "Priya Nair",
+  "review_date": "2026-08-22",
+  "title": "Spa was lovely, service was slow",
+  "body": "The treatment itself was excellent but we waited twenty minutes past our booking time with no explanation.",
+  "category": "spa",
+  "responded": false
+}
